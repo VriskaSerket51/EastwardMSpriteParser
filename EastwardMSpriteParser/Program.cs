@@ -11,13 +11,13 @@ void OnParsed(Options o)
 {
     if (!File.Exists(o.MSpritePath))
     {
-        Console.WriteLine($"No MSprite Fount at: {o.MSpritePath}");
+        Console.WriteLine($"No MSprite Found at: {o.MSpritePath}");
         return;
     }
 
     if (!File.Exists(o.TexturePath))
     {
-        Console.WriteLine($"No Texture Fount at: {o.TexturePath}");
+        Console.WriteLine($"No Texture Found at: {o.TexturePath}");
         return;
     }
 

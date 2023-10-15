@@ -99,11 +99,6 @@ public class MSprite
 
     public void ExtractTo(string path)
     {
-        if (!Directory.Exists(path))
-        {
-            Directory.CreateDirectory(path);
-        }
-
         foreach (var (frameId, frame) in _frames)
         {
             var rect = CalculateBound(frame);

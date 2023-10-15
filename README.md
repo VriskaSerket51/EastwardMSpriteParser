@@ -3,6 +3,4 @@ Eastward MSprite Parser
 
 Read ".msprite" file and texture file, then extract to output directory.
 
-TODO:
-- Make frames to ".gif" file.
-- Size Multiplying.
+Usage example: `EastwardMSpriteParser.exe -m sam.msprite -t sam_texture.png -o ./output -s 4`

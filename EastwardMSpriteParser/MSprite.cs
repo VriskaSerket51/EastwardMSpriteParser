@@ -1,7 +1,8 @@
 ﻿using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
-using System.Numerics;
+using System.Text.RegularExpressions;
+using AnimatedGif;
 using SimpleJSON;
 
 namespace EastwardMSpriteParser;
@@ -32,13 +33,44 @@ public class MSprite
         }
     }
 
+    private struct Anim
+    {
+        public struct Sequence
+        {
+            public string FrameId;
+            public float Delay;
+            public Point Origin;
+
+            public Sequence(string frameId, float delay, Point origin)
+            {
+                FrameId = frameId;
+                Delay = delay;
+                Origin = origin;
+            }
+        }
+
+        public string Id;
+        public string Name;
+        public List<Sequence> Sequences;
+
+        public Anim(string id, string name, List<Sequence> sequences)
+        {
+            Id = id;
+            Name = name;
+            Sequences = sequences;
+        }
+    }
+
     private readonly Dictionary<string, Module> _modules;
     private readonly Dictionary<string, Frame> _frames;
+    private readonly Dictionary<string, Anim> _anims;
     private readonly Image _texture;
+    private readonly int _multiplier;
 
-    public MSprite(string json, Image texture)
+    public MSprite(string json, Image texture, int multiplier)
     {
         _texture = texture;
+        _multiplier = multiplier;
         var root = JSONNode.Parse(json);
         var modulesNode = root["modules"];
         _modules = new Dictionary<string, Module>(modulesNode.Count);
@@ -61,6 +93,23 @@ public class MSprite
             }
 
             _frames[id] = new Frame(id, parts);
+        }
+
+        var animsNode = root["anims"];
+        _anims = new Dictionary<string, Anim>(animsNode.Count);
+        foreach (var (id, value) in animsNode)
+        {
+            var name = value["name"].Value;
+            var seqNode = value["seq"].AsArray;
+            var sequences = new List<Anim.Sequence>();
+            foreach (var (_, sequenceNode) in seqNode)
+            {
+                var sequence = new Anim.Sequence(sequenceNode[0].Value, sequenceNode[1].AsFloat,
+                    new Point(sequenceNode[2].AsInt, sequenceNode[3].AsInt));
+                sequences.Add(sequence);
+            }
+
+            _anims.Add(id, new Anim(id, name, sequences));
         }
     }
 
@@ -97,24 +146,87 @@ public class MSprite
         return new Rectangle(new Point(xMin, yMin), new Size(xMax - xMin, yMax - yMin));
     }
 
-    public void ExtractTo(string path)
+    private Rectangle CalculateBound(IEnumerable<Frame> frames)
     {
-        foreach (var (frameId, frame) in _frames)
+        int xMin = int.MaxValue, yMin = int.MaxValue, xMax = int.MinValue, yMax = int.MinValue;
+        foreach (var frame in frames)
         {
-            var rect = CalculateBound(frame);
-
-            using Bitmap target = new Bitmap(rect.Width, rect.Height, PixelFormat.Format32bppArgb);
-            using Graphics g = Graphics.FromImage(target);
-            g.InterpolationMode = InterpolationMode.NearestNeighbor;
             foreach (var (moduleId, point) in frame.Parts)
             {
                 var module = _modules[moduleId];
-                g.DrawImage(_texture, new Rectangle((Point)((Size)point - (Size)rect.Location), module.Rect.Size),
-                    module.Rect,
-                    GraphicsUnit.Pixel);
-            }
+                Point min = point;
+                Point max = min + new Size(module.Rect.Width, module.Rect.Height);
 
-            target.Save(Path.Combine(path, frameId + ".png"), ImageFormat.Png);
+                if (xMin > min.X)
+                {
+                    xMin = min.X;
+                }
+
+                if (yMin > min.Y)
+                {
+                    yMin = min.Y;
+                }
+
+                if (xMax < max.X)
+                {
+                    xMax = max.X;
+                }
+
+                if (yMax < max.Y)
+                {
+                    yMax = max.Y;
+                }
+            }
         }
+
+        return new Rectangle(new Point(xMin, yMin), new Size(xMax - xMin, yMax - yMin));
+    }
+
+    public void ExtractTo(string path)
+    {
+        foreach (var (_, anim) in _anims)
+        {
+            var rect = CalculateBound(anim.Sequences.Select(s => _frames[s.FrameId]));
+            string name = anim.Name.Replace(":", "_");
+            using var gif = AnimatedGif.AnimatedGif.Create(Path.Combine(path, name + ".gif"), 16);
+
+            for (var i = 0; i < anim.Sequences.Count; i++)
+            {
+                var sequence = anim.Sequences[i];
+                var frame = _frames[sequence.FrameId];
+                using var image = Frame2Image(frame);
+                using Bitmap target = new Bitmap(rect.Width * _multiplier, rect.Height * _multiplier,
+                    PixelFormat.Format32bppArgb);
+                if (frame.Parts.Count > 0)
+                {
+                    var frameRect = CalculateBound(frame);
+                    using Graphics g = Graphics.FromImage(target);
+                    g.InterpolationMode = InterpolationMode.NearestNeighbor;
+                    g.DrawImage(image,
+                        new Rectangle((Point)(((Size)frameRect.Location - (Size)rect.Location) * _multiplier),
+                            frameRect.Size * _multiplier),
+                        frameRect with { X = 0, Y = 0 }, GraphicsUnit.Pixel);
+                }
+
+                gif.AddFrame(target, (int)(sequence.Delay * 1000), GifQuality.Bit8);
+            }
+        }
+    }
+
+    private Image Frame2Image(Frame frame)
+    {
+        var rect = CalculateBound(frame);
+        Bitmap target = new Bitmap(rect.Width, rect.Height, PixelFormat.Format32bppArgb);
+        using Graphics g = Graphics.FromImage(target);
+        g.InterpolationMode = InterpolationMode.NearestNeighbor;
+        foreach (var (moduleId, point) in frame.Parts)
+        {
+            var module = _modules[moduleId];
+            g.DrawImage(_texture, new Rectangle((Point)((Size)point - (Size)rect.Location), module.Rect.Size),
+                module.Rect,
+                GraphicsUnit.Pixel);
+        }
+
+        return target;
     }
 }

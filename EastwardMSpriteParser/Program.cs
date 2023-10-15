@@ -5,8 +5,6 @@ using EastwardMSpriteParser;
 Parser.Default.ParseArguments<Options>(args)
     .WithParsed(OnParsed);
 
-// OnParsed(new Options());
-
 void OnParsed(Options o)
 {
     if (!File.Exists(o.MSpritePath))
@@ -26,8 +24,13 @@ void OnParsed(Options o)
         Directory.CreateDirectory(o.OutputDirectory);
     }
 
+    if (o.SizeMultiplier < 1)
+    {
+        o.SizeMultiplier = 1;
+    }
+
     string json = File.ReadAllText(o.MSpritePath);
     Image texture = Image.FromFile(o.TexturePath);
-    var mSprite = new MSprite(json, texture);
+    var mSprite = new MSprite(json, texture, o.SizeMultiplier);
     mSprite.ExtractTo(o.OutputDirectory);
 }

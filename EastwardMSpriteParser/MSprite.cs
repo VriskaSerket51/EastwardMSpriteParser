@@ -3,6 +3,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Text.RegularExpressions;
 using AnimatedGif;
+using CMK;
 using SimpleJSON;
 
 namespace EastwardMSpriteParser;
@@ -188,11 +189,15 @@ public class MSprite
         {
             var rect = CalculateBound(anim.Sequences.Select(s => _frames[s.FrameId]));
             string name = anim.Name.Replace(":", "_");
-            using var gif = AnimatedGif.AnimatedGif.Create(Path.Combine(path, name + ".gif"), 16);
-
-            for (var i = 0; i < anim.Sequences.Count; i++)
+            using var fs = File.Create(Path.Combine(path, name + ".png"));
+            using var apngCreator = new AnimatedPngCreator(fs, rect.Width, rect.Height, new AnimatedPngCreator.Config()
             {
-                var sequence = anim.Sequences[i];
+                FilterUnchangedPixels = false
+            });
+            // using var gif = AnimatedGif.AnimatedGif.Create(Path.Combine(path, name + ".gif"), 16);
+
+            foreach (var sequence in anim.Sequences)
+            {
                 var frame = _frames[sequence.FrameId];
                 using var image = Frame2Image(frame);
                 using Bitmap target = new Bitmap(rect.Width * _multiplier, rect.Height * _multiplier,
@@ -208,7 +213,7 @@ public class MSprite
                         frameRect with { X = 0, Y = 0 }, GraphicsUnit.Pixel);
                 }
 
-                gif.AddFrame(target, (int)(sequence.Delay * 1000), GifQuality.Bit8);
+                apngCreator.WriteFrame(target, (short)(sequence.Delay * 1000), 0, 0, 1, 1);
             }
         }
     }

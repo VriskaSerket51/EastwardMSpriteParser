@@ -4,7 +4,7 @@ namespace EastwardMSpriteParser;
 
 public class Options
 {
-    [Option('m', "mSprite", Required = true, HelpText = "Set MSprite path.")]
+    [Option('m', "msprite", Required = true, HelpText = "Set MSprite path.")]
     public string MSpritePath { get; set; }
 
     [Option('t', "texture", Required = true, HelpText = "Set Texture Path.")]

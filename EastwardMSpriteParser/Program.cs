@@ -29,6 +29,10 @@ void OnParsed(Options o)
         o.SizeMultiplier = 1;
     }
 
+    Console.WriteLine("Made By VriskaSerket51");
+    Console.WriteLine("https://github.com/VriskaSerket51/EastwardMSpriteParser");
+    Console.WriteLine();
+    
     string json = File.ReadAllText(o.MSpritePath);
     Image texture = Image.FromFile(o.TexturePath);
     var mSprite = new MSprite(json, texture, o.SizeMultiplier);

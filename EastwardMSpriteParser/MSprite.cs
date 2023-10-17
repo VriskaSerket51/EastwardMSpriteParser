@@ -176,7 +176,7 @@ public class MSprite
 
     public void ExtractTo(string path, AnimatedWrapper.Type type)
     {
-        int idx = 0;
+        int idx = 1;
         foreach (var (_, anim) in _anims)
         {
             string name = anim.Name.Replace(":", "_") + AnimatedWrapper.GetExtension(type);
@@ -206,6 +206,7 @@ public class MSprite
 
             idx++;
         }
+        Console.WriteLine("Extracting Finished!");
     }
 
     private Image Frame2Image(Frame frame)

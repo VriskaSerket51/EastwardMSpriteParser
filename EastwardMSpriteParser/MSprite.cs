@@ -182,7 +182,7 @@ public class MSprite
             string name = anim.Name.Replace(":", "_") + AnimatedWrapper.GetExtension(type);
             Console.WriteLine($"Extracting {name}... ({idx}/{_anims.Count})");
             var rect = CalculateBound(anim.Sequences.Select(s => _frames[s.FrameId]));
-            var wrapper = new AnimatedWrapper(type, Path.Combine(path, name), rect.Width, rect.Height);
+            using var wrapper = new AnimatedWrapper(type, Path.Combine(path, name), rect.Width, rect.Height);
 
             foreach (var sequence in anim.Sequences)
             {
@@ -206,6 +206,7 @@ public class MSprite
 
             idx++;
         }
+
         Console.WriteLine("Extracting Finished!");
     }
 
@@ -218,8 +219,7 @@ public class MSprite
         foreach (var (moduleId, point) in frame.Parts)
         {
             var module = _modules[moduleId];
-            g.DrawImage(_texture, new Rectangle((Point)((Size)point - (Size)rect.Location), module.Rect.Size),
-                module.Rect,
+            g.DrawImage(_texture, new Rectangle(point - (Size)rect.Location, module.Rect.Size), module.Rect,
                 GraphicsUnit.Pixel);
         }
 

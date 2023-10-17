@@ -4,7 +4,7 @@ using CMK;
 
 namespace EastwardMSpriteParser;
 
-public class AnimatedWrapper
+public class AnimatedWrapper : IDisposable
 {
     public enum Type
     {
@@ -30,7 +30,7 @@ public class AnimatedWrapper
                 });
                 break;
             case Type.Gif:
-                _gifCreator = new AnimatedGifCreator(fs);
+                _gifCreator = new AnimatedGifCreator(fs, 16);
                 break;
             case Type.Webp:
             default:
@@ -61,8 +61,14 @@ public class AnimatedWrapper
                 _pngCreator?.WriteFrame(image, (short)delay, 0, 0, 1);
                 break;
             case Type.Gif:
-                _gifCreator?.AddFrame(image, delay);
+                _gifCreator?.AddFrame(image, delay, GifQuality.Bit8);
                 break;
         }
+    }
+
+    public void Dispose()
+    {
+        _gifCreator?.Dispose();
+        _pngCreator?.Dispose();
     }
 }

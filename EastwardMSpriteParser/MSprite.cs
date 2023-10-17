@@ -1,9 +1,6 @@
 ﻿using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
-using System.Text.RegularExpressions;
-using AnimatedGif;
-using CMK;
 using SimpleJSON;
 
 namespace EastwardMSpriteParser;
@@ -12,24 +9,20 @@ public class MSprite
 {
     private struct Module
     {
-        public string Id;
-        public Rectangle Rect;
+        public readonly Rectangle Rect;
 
-        public Module(string id, Rectangle rect)
+        public Module(Rectangle rect)
         {
-            Id = id;
             Rect = rect;
         }
     }
 
     private struct Frame
     {
-        public string Id;
-        public Dictionary<string, Point> Parts;
+        public readonly Dictionary<string, Point> Parts;
 
-        public Frame(string id, Dictionary<string, Point> parts)
+        public Frame(Dictionary<string, Point> parts)
         {
-            Id = id;
             Parts = parts;
         }
     }
@@ -38,9 +31,9 @@ public class MSprite
     {
         public struct Sequence
         {
-            public string FrameId;
-            public float Delay;
-            public Point Origin;
+            public readonly string FrameId;
+            public readonly float Delay;
+            public readonly Point Origin;
 
             public Sequence(string frameId, float delay, Point origin)
             {
@@ -50,13 +43,11 @@ public class MSprite
             }
         }
 
-        public string Id;
-        public string Name;
-        public List<Sequence> Sequences;
+        public readonly string Name;
+        public readonly List<Sequence> Sequences;
 
-        public Anim(string id, string name, List<Sequence> sequences)
+        public Anim(string name, List<Sequence> sequences)
         {
-            Id = id;
             Name = name;
             Sequences = sequences;
         }
@@ -79,7 +70,7 @@ public class MSprite
         {
             var rectNode = value["rect"];
             Rectangle rect = new Rectangle(rectNode[0].AsInt, rectNode[1].AsInt, rectNode[2].AsInt, rectNode[3].AsInt);
-            _modules[id] = new Module(id, rect);
+            _modules[id] = new Module(rect);
         }
 
         var framesNode = root["frames"];
@@ -93,7 +84,7 @@ public class MSprite
                 parts.Add(partNode[0].Value, new Point(partNode[1].AsInt, partNode[2].AsInt));
             }
 
-            _frames[id] = new Frame(id, parts);
+            _frames[id] = new Frame(parts);
         }
 
         var animsNode = root["anims"];
@@ -110,7 +101,7 @@ public class MSprite
                 sequences.Add(sequence);
             }
 
-            _anims.Add(id, new Anim(id, name, sequences));
+            _anims.Add(id, new Anim(name, sequences));
         }
     }
 
@@ -183,18 +174,15 @@ public class MSprite
         return new Rectangle(new Point(xMin, yMin), new Size(xMax - xMin, yMax - yMin));
     }
 
-    public void ExtractTo(string path)
+    public void ExtractTo(string path, AnimatedWrapper.Type type)
     {
+        int idx = 0;
         foreach (var (_, anim) in _anims)
         {
+            string name = anim.Name.Replace(":", "_") + AnimatedWrapper.GetExtension(type);
+            Console.WriteLine($"Extracting {name}... ({idx}/{_anims.Count})");
             var rect = CalculateBound(anim.Sequences.Select(s => _frames[s.FrameId]));
-            string name = anim.Name.Replace(":", "_");
-            using var fs = File.Create(Path.Combine(path, name + ".png"));
-            using var apngCreator = new AnimatedPngCreator(fs, rect.Width, rect.Height, new AnimatedPngCreator.Config()
-            {
-                FilterUnchangedPixels = false
-            });
-            // using var gif = AnimatedGif.AnimatedGif.Create(Path.Combine(path, name + ".gif"), 16);
+            var wrapper = new AnimatedWrapper(type, Path.Combine(path, name), rect.Width, rect.Height);
 
             foreach (var sequence in anim.Sequences)
             {
@@ -213,8 +201,10 @@ public class MSprite
                         frameRect with { X = 0, Y = 0 }, GraphicsUnit.Pixel);
                 }
 
-                apngCreator.WriteFrame(target, (short)(sequence.Delay * 1000), 0, 0, 1, 1);
+                wrapper.WriteFrame(target, (int)(sequence.Delay * 1000));
             }
+
+            idx++;
         }
     }
 

@@ -32,5 +32,5 @@ void OnParsed(Options o)
     string json = File.ReadAllText(o.MSpritePath);
     Image texture = Image.FromFile(o.TexturePath);
     var mSprite = new MSprite(json, texture, o.SizeMultiplier);
-    mSprite.ExtractTo(o.OutputDirectory);
+    mSprite.ExtractTo(o.OutputDirectory, o.GifMode ? AnimatedWrapper.Type.Gif : AnimatedWrapper.Type.Apng);
 }

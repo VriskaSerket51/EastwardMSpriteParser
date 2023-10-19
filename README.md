@@ -10,7 +10,7 @@ Parameters:
 - -o or -output_dir: Set output directory.
 - -s or --size: Set size multiplier. Default value is 1
 - --gif: Output files will be ".gif" instead of apng files.
-- > **Warning**
-  > gif does not support alpha channel fully.`
+ > **Warning**
+ > gif does not support alpha channel fully.`
 
 Usage example: `EastwardMSpriteParser.exe -m sam.msprite -t sam_texture.png -o ./output`

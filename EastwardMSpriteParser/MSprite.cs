@@ -195,6 +195,7 @@ public class MSprite
                     var frameRect = CalculateBound(frame);
                     using Graphics g = Graphics.FromImage(target);
                     g.InterpolationMode = InterpolationMode.NearestNeighbor;
+                    g.PixelOffsetMode = PixelOffsetMode.Half;
                     g.DrawImage(image,
                         new Rectangle((Point)(((Size)frameRect.Location - (Size)rect.Location) * _multiplier),
                             frameRect.Size * _multiplier),
